@@ -59,37 +59,37 @@
 
 <script type="module">
   import { supabase } from "../supabase-client.js";
-
   const form = document.getElementById("login-form");
   const errorEl = document.getElementById("auth-error");
   const submitBtn = document.getElementById("login-submit");
 
+  const RATE_LIMIT_KEY = 'loginRateLimit';
+  const RATE_LIMIT_MS = 60_000; // 60s
+
+  function startCountdown(key, until, button, defaultText) {
+    button.disabled = true;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+      if (remaining <= 0) {
+        clearInterval(intervalId);
+        localStorage.removeItem(key);
+        button.disabled = false;
+        button.textContent = defaultText;
+        return;
+      }
+      button.textContent = `Try again in ${remaining}s`;
+    };
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return intervalId;
+  }
+
+  function applyRateLimit(key, ms = RATE_LIMIT_MS) {
+    const until = Date.now() + ms;
+    localStorage.setItem(key, String(until));
+    startCountdown(key, until, submitBtn, 'Sign In');
+  }
+
   // If already signed in, skip straight to chat.
   supabase.auth.getSession().then(({ data }) => {
     if (data.session) window.location.href = "../chat.html";
-  });
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    errorEl.hidden = true;
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Signing in...";
-
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      errorEl.textContent = error.message;
-      errorEl.hidden = false;
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Sign In";
-      return;
-    }
-
-    window.location.href = "../chat.html";
-  });
-</script>
-</body>
-</html>
