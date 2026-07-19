@@ -68,49 +68,49 @@
   const errorEl = document.getElementById("auth-error");
   const successEl = document.getElementById("auth-success");
   const submitBtn = document.getElementById("signup-submit");
+  const RATE_LIMIT_KEY = 'signupRateLimit';
+  const RATE_LIMIT_MS = 60_000; // 60s
+
+  function startCountdown(key, until, button, defaultText) {
+    button.disabled = true;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+      if (remaining <= 0) {
+        clearInterval(intervalId);
+        localStorage.removeItem(key);
+        button.disabled = false;
+        button.textContent = defaultText;
+        return;
+      }
+      button.textContent = `Try again in ${remaining}s`;
+    };
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return intervalId;
+  }
+
+  function applyRateLimit(key, ms = RATE_LIMIT_MS) {
+    const until = Date.now() + ms;
+    localStorage.setItem(key, String(until));
+    startCountdown(key, until, submitBtn, 'Create Account');
+  }
 
   supabase.auth.getSession().then(({ data }) => {
     if (data.session) window.location.href = "../chat.html";
   });
+
+  // Restore any persisted rate-limit state on load.
+  const storedUntil = parseInt(localStorage.getItem(RATE_LIMIT_KEY));
+  if (!Number.isNaN(storedUntil) && storedUntil > Date.now()) {
+    startCountdown(RATE_LIMIT_KEY, storedUntil, submitBtn, 'Create Account');
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.hidden = true;
     successEl.hidden = true;
 
+    if (submitBtn.disabled) return;
+
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
-    const confirmPassword = document.getElementById("confirm-password").value;
-
-    if (password !== confirmPassword) {
-      errorEl.textContent = "Passwords don't match.";
-      errorEl.hidden = false;
-      return;
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Creating account...";
-
-    const { data, error } = await supabase.auth.signUp({ email, password });
-
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Create Account";
-
-    if (error) {
-      errorEl.textContent = error.message;
-      errorEl.hidden = false;
-      return;
-    }
-
-    // If email confirmation is required, there'll be no active session yet.
-    if (data.session) {
-      window.location.href = "../chat.html";
-    } else {
-      successEl.textContent = "Account created! Check your email to confirm, then sign in.";
-      successEl.hidden = false;
-      form.reset();
-    }
-  });
-</script>
-</body>
-</html>
