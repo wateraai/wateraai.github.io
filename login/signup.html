@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — Water AI</title>
+<meta name="description" content="Create a free Water AI account to save your chat history and unlock Pro features.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://waterai.github.io/login/signup.html">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <a href="../index.html" class="brand">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12 2C12 2 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 2 12 2Z" fill="#1F7A8C"/>
+      </svg>
+      Water AI
+    </a>
+    <div class="nav-links">
+      <a href="../index.html#features">Product</a>
+      <a href="../index.html#pricing">Pricing</a>
+      <a href="../chat.html">Chat</a>
+    </div>
+    <div class="nav-actions">
+      <a href="login.html" class="btn btn-ghost">Sign In</a>
+      <a href="../chat.html" class="btn btn-primary">Try Water AI</a>
+    </div>
+  </div>
+</nav>
+
+<main class="auth-page">
+  <div class="auth-card">
+    <h1>Create your account</h1>
+    <p class="sub">Free to join. Save your chat history and pick up right where you left off.</p>
+
+    <form id="signup-form" novalidate>
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" autocomplete="email" required placeholder="you@example.com">
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="At least 6 characters" minlength="6">
+
+      <label for="password2">Confirm password</label>
+      <input type="password" id="password2" name="password2" autocomplete="new-password" required placeholder="Re-enter your password">
+
+      <button type="submit" class="btn btn-primary btn-block auth-submit-btn" id="signup-submit-btn">Create Account</button>
+
+      <div id="signup-error" class="auth-error" style="display:none;"></div>
+      <div id="signup-success" class="auth-success" style="display:none;"></div>
+    </form>
+
+    <p class="auth-switch">Already have an account? <a href="login.html">Sign in</a></p>
+    <p class="auth-switch"><a href="../chat.html">Continue without an account →</a></p>
+  </div>
+</main>
+
+<script type="module">
+  import { supabase } from "../supabase-client.js";
+
+  const form = document.getElementById("signup-form");
+  const submitBtn = document.getElementById("signup-submit-btn");
+  const errorBox = document.getElementById("signup-error");
+  const successBox = document.getElementById("signup-success");
+
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) window.location.href = "../chat.html";
+  }).catch(() => {});
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = "block";
+    successBox.style.display = "none";
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.style.display = "none";
+    successBox.style.display = "none";
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const password2 = document.getElementById("password2").value;
+
+    if (password !== password2) {
+      showError("Passwords don't match.");
+      return;
+    }
+    if (password.length < 6) {
+      showError("Password must be at least 6 characters.");
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creating account…";
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/login/login.html` },
+      });
+      if (error) throw error;
+
+      try { localStorage.removeItem("chatAccessUntil"); } catch (e) {}
+
+      if (data.session) {
+        successBox.textContent = "Account created — redirecting…";
+        successBox.style.display = "block";
+        window.location.href = "../chat.html";
+      } else {
+        successBox.textContent = "Account created! Check your email to confirm, then sign in.";
+        successBox.style.display = "block";
+        form.reset();
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Create Account";
+      }
+    } catch (err) {
+      showError(err.message || "Could not create your account. Please try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Create Account";
+    }
+  });
+</script>
+</body>
+</html>
