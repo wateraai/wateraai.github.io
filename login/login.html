@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Water AI</title>
+<meta name="description" content="Sign in to Water AI to save your chat history and unlock Pro features.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://waterai.github.io/login/login.html">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <a href="../index.html" class="brand">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12 2C12 2 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 2 12 2Z" fill="#1F7A8C"/>
+      </svg>
+      Water AI
+    </a>
+    <div class="nav-links">
+      <a href="../index.html#features">Product</a>
+      <a href="../index.html#pricing">Pricing</a>
+      <a href="../chat.html">Chat</a>
+    </div>
+    <div class="nav-actions">
+      <a href="signup.html" class="btn btn-ghost">Sign Up</a>
+      <a href="../chat.html" class="btn btn-primary">Try Water AI</a>
+    </div>
+  </div>
+</nav>
+
+<main class="auth-page">
+  <div class="auth-card">
+    <h1>Welcome back</h1>
+    <p class="sub">Sign in to sync your chats and Pro plan across devices.</p>
+
+    <form id="login-form" novalidate>
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" autocomplete="email" required placeholder="you@example.com">
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+
+      <button type="submit" class="btn btn-primary btn-block auth-submit-btn" id="login-submit-btn">Sign In</button>
+
+      <div id="login-error" class="auth-error" style="display:none;"></div>
+      <div id="login-success" class="auth-success" style="display:none;"></div>
+    </form>
+
+    <p class="auth-switch">Don't have an account? <a href="signup.html">Sign up</a></p>
+    <p class="auth-switch"><a href="../chat.html">Continue without an account →</a></p>
+  </div>
+</main>
+
+<script type="module">
+  import { supabase } from "../supabase-client.js";
+
+  const form = document.getElementById("login-form");
+  const submitBtn = document.getElementById("login-submit-btn");
+  const errorBox = document.getElementById("login-error");
+  const successBox = document.getElementById("login-success");
+
+  // If already signed in, skip straight to chat.
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) window.location.href = "../chat.html";
+  }).catch(() => {});
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = "block";
+    successBox.style.display = "none";
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.style.display = "none";
+    successBox.style.display = "none";
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Signing in…";
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      successBox.textContent = "Signed in — redirecting…";
+      successBox.style.display = "block";
+
+      // Clear any guest grace-period flag now that a real session exists.
+      try { localStorage.removeItem("chatAccessUntil"); } catch (e) {}
+
+      const params = new URLSearchParams(window.location.search);
+      window.location.href = params.get("redirect") || "../chat.html";
+    } catch (err) {
+      showError(err.message || "Could not sign in. Check your email and password and try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Sign In";
+    }
+  });
+</script>
+</body>
+</html>
